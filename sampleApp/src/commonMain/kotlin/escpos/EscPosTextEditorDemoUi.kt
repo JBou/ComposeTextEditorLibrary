@@ -120,10 +120,10 @@ private fun createEscPosDemoText(): String = """
 |center|Welcome to Our Store!
 ~~**IMPORTANT NOTICE**~~
 
-##Today's Specials##
+##Today's %%Specials%%##
 **Premium Coffee** - $3.99
 ++Latte++ - $4.49
 
-|right|Thank you for visiting!
+|right|Thank you for %%visiting%%!
 __Please come again__
 """.trimIndent()

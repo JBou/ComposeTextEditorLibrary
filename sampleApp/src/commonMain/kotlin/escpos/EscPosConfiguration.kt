@@ -47,7 +47,10 @@ data class EscPosConfiguration(
     // Alignment styles (for visual representation in editor)
     val centerAlignStyle: SpanStyle = SpanStyle(), // Will be handled by custom span
     val leftAlignStyle: SpanStyle = SpanStyle(),   // Will be handled by custom span
-    val rightAlignStyle: SpanStyle = SpanStyle()   // Will be handled by custom span
+    val rightAlignStyle: SpanStyle = SpanStyle(),  // Will be handled by custom span
+
+    // Format marker style for alignment markers (semi-transparent)
+    val formatMarkerStyle: SpanStyle = SpanStyle(color = Color.Black.copy(alpha = 0.2f))
 ) {
     companion object {
         val DEFAULT = EscPosConfiguration()

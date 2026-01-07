@@ -51,12 +51,16 @@ private fun AnnotatedString.Builder.parseEscPosTextRecursive(
     
     while (currentIndex < end) {
         when {
-            // Alignment markers - skip them entirely
+            // Alignment markers - render them with reduced alpha
             text.startsWith("|", currentIndex) -> {
                 val pipeEndIndex = text.indexOf("|", currentIndex + 1)
                 if (pipeEndIndex != -1 && pipeEndIndex < end) {
                     val alignmentType = text.substring(currentIndex + 1, pipeEndIndex)
                     if (alignmentType in listOf("left", "center", "right")) {
+                        val markerText = text.substring(currentIndex, pipeEndIndex + 1)
+                        withStyle(configuration.formatMarkerStyle) {
+                            append(markerText)
+                        }
                         currentIndex = pipeEndIndex + 1
                         continue
                     }

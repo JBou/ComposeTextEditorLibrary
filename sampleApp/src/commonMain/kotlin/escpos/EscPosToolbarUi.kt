@@ -269,6 +269,15 @@ private fun insertAlignmentFormatting(
         )
         state.replace(range, replacement)
 
+        // Apply format marker style to alignment markers
+        if (replacement.startsWith("|") && replacement.endsWith("|")) {
+            val markerRange = TextEditorRange(
+                CharLineOffset(line, 0),
+                CharLineOffset(line, replacement.length)
+            )
+            state.addStyleSpan(markerRange, EscPosConfiguration.DEFAULT.formatMarkerStyle)
+        }
+
         selection?.let {
             val delta = replacement.length - rangeEnd
             state.selector.updateSelection(
