@@ -18,7 +18,8 @@ enum class Destination {
 	EmptyTextEditor,
 	SpellChecking,
 	CodeEditor,
-	FindDemo
+	FindDemo,
+	EscPosEditor
 }
 
 @Composable
@@ -85,6 +86,10 @@ fun App() {
 				)
 
 				Destination.FindDemo -> FindTextEditorDemoUi(
+					navigateTo = ::navigateTo,
+				)
+
+				Destination.EscPosEditor -> EscPosTextEditorDemoUi(
 					navigateTo = ::navigateTo,
 				)
 			}
