@@ -254,44 +254,37 @@ private fun insertAlignmentFormatting(
     alignment: String,
     isActive: Boolean
 ) {
-    val cursorPos = state.cursor.position
+    val line = state.cursor.position.line
+    val lineText = state.textLines[line].text
+    val selection = state.selector.selection
+    val existingEnd = lineText.takeIf { it.trim().startsWith("|") }
+        ?.indexOf("|", 1)
+        ?.takeIf { it >= 0 }
+        ?.plus(1)
 
-    if (isActive) {
-        // Remove existing alignment
-        val lineText = state.textLines[cursorPos.line].text
-        if (lineText.trim().startsWith("|")) {
-            val existingEnd = lineText.indexOf("|", 1) + 1
-            if (existingEnd > 0) {
-                val range = TextEditorRange(
-                    CharLineOffset(cursorPos.line, 0),
-                    CharLineOffset(cursorPos.line, existingEnd)
-                )
-                state.replace(range, "")
-            }
-        }
-    } else {
-        // Insert alignment at the beginning of the current line
-        val alignmentText = "|$alignment|"
+    fun replace(rangeEnd: Int, replacement: String) {
+        val range = TextEditorRange(
+            CharLineOffset(line, 0),
+            CharLineOffset(line, rangeEnd)
+        )
+        state.replace(range, replacement)
 
-        // Check if alignment already exists at line start
-        val lineText = state.textLines[cursorPos.line].text
-        if (!lineText.trim().startsWith("|")) {
-            // Insert alignment at line start by replacing from beginning
-            val range = TextEditorRange(
-                CharLineOffset(cursorPos.line, 0),
-                CharLineOffset(cursorPos.line, 0)
+        selection?.let {
+            val delta = replacement.length - rangeEnd
+            state.selector.updateSelection(
+                CharLineOffset(it.start.line, maxOf(0, it.start.char + delta)),
+                CharLineOffset(it.end.line, maxOf(0, it.end.char + delta))
             )
-            state.replace(range, alignmentText)
-        } else {
-            // Replace existing alignment
-            val existingEnd = lineText.indexOf("|", 1) + 1
-            if (existingEnd > 0) {
-                val range = TextEditorRange(
-                    CharLineOffset(cursorPos.line, 0),
-                    CharLineOffset(cursorPos.line, existingEnd)
-                )
-                state.replace(range, alignmentText)
-            }
+        }
+    }
+
+    when {
+        isActive && existingEnd != null ->
+            replace(existingEnd, "")
+
+        !isActive -> {
+            val alignmentText = "|$alignment|"
+            replace(existingEnd ?: 0, alignmentText)
         }
     }
 }
