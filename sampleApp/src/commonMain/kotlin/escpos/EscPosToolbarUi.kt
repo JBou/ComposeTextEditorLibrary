@@ -1,8 +1,11 @@
+package escpos
+
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
@@ -12,12 +15,14 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.FormatAlignCenter
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
-import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
-import androidx.compose.material.icons.filled.Height
 import androidx.compose.material.icons.filled.InvertColors
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -28,23 +33,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.darkrockstudios.texteditor.CharLineOffset
 import com.darkrockstudios.texteditor.TextEditorRange
 import com.darkrockstudios.texteditor.sampleapp.EscPosConfiguration
 import com.darkrockstudios.texteditor.sampleapp.EscPosExtension
-import com.darkrockstudios.texteditor.sampleapp.common.FormatButton
-import com.darkrockstudios.texteditor.sampleapp.common.ToolbarButton
-import com.darkrockstudios.texteditor.sampleapp.common.toggleStyle
 import com.darkrockstudios.texteditor.state.TextEditorState
-import com.darkrockstudios.texteditor.state.getRichSpansAtPosition
-import com.darkrockstudios.texteditor.state.getRichSpansInRange
 import com.darkrockstudios.texteditor.state.getSpanStylesInRange
 
 // Centralized SpanStyle definitions for reuse across parsing, toolbar, and export
@@ -273,6 +272,95 @@ private fun insertAlignmentFormatting(
                 CharLineOffset(cursorPos.line, existingEnd)
             )
             state.replace(range, alignmentText)
+        }
+    }
+}
+
+
+/**
+ * Common toolbar button component used across different editor demos.
+ * Provides consistent styling for toolbar buttons with active state support.
+ */
+@Composable
+fun ToolbarButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+    isActive: Boolean = false,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    focusable: Boolean = true
+) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .size(32.dp)
+            .then(if (focusable) Modifier else Modifier),
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = if (isActive)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+            else
+                MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (isActive)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+        )
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+/**
+ * Format button wrapper that uses ToolbarButton with consistent styling.
+ * Use this for formatting-related buttons (bold, italic, etc.) to indicate active state.
+ */
+@Composable
+fun FormatButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+    isActive: Boolean,
+    enabled: Boolean = true
+) {
+    ToolbarButton(
+        onClick = onClick,
+        icon = icon,
+        contentDescription = contentDescription,
+        isActive = isActive,
+        enabled = enabled
+    )
+}
+
+/**
+ * Toggles a SpanStyle on the current selection or cursor position.
+ * If there's a selection, adds/removes the style from the selected range.
+ * If there's no selection, adds/removes the style from the cursor position.
+ */
+fun toggleStyle(
+    state: TextEditorState,
+    isActive: Boolean,
+    spanStyle: SpanStyle
+) {
+    val selection = state.selector.selection
+    if (selection != null) {
+        if (isActive) {
+            state.removeStyleSpan(selection, spanStyle)
+        } else {
+            state.addStyleSpan(selection, spanStyle)
+        }
+    } else {
+        if (isActive) {
+            state.cursor.removeStyle(spanStyle)
+        } else {
+            state.cursor.addStyle(spanStyle)
         }
     }
 }

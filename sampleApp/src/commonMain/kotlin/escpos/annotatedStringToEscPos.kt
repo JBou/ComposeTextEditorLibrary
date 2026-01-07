@@ -4,8 +4,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.sp
-import com.darkrockstudios.texteditor.sampleapp.EscPosConfiguration
 
 /**
  * Converts an AnnotatedString to an ESC/POS formatted string.

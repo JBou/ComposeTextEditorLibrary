@@ -7,6 +7,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import com.darkrockstudios.texteditor.markdown.MarkdownConfiguration
 import com.darkrockstudios.texteditor.richstyle.HighlightSpanStyle
+import escpos.EscPosTextEditorDemoUi
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 val HIGHLIGHT = HighlightSpanStyle(Color(0x40FF0000))

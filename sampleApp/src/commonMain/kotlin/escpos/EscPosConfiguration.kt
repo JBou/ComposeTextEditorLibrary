@@ -34,7 +34,7 @@ data class EscPosConfiguration(
     val doubleWidthStyle: SpanStyle = SpanStyle(
         letterSpacing = defaultTextStyle.fontSize * doubleWidthScale
     ),
-    val shadowOffset: Float = 2f,
+    val shadowOffset: Float = 1.5f,
     val shadowBlurRadius: Float = 0f,
     val shadowStyle: SpanStyle = SpanStyle(
         fontWeight = FontWeight.Normal,
