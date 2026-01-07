@@ -46,16 +46,6 @@ import com.darkrockstudios.texteditor.sampleapp.EscPosExtension
 import com.darkrockstudios.texteditor.state.TextEditorState
 import com.darkrockstudios.texteditor.state.getSpanStylesInRange
 
-// Centralized SpanStyle definitions for reuse across parsing, toolbar, and export
-private fun getShadowSpanStyle(escPosConfiguration: EscPosConfiguration): SpanStyle {
-    return SpanStyle(
-        fontWeight = FontWeight.Normal,
-        shadow = Shadow(
-            offset = Offset(0f, escPosConfiguration.shadowOffset), // vertical offset
-            blurRadius = escPosConfiguration.shadowBlurRadius
-        )
-    )
-}
 
 @Composable
 fun EscPosToolbar(
@@ -70,6 +60,10 @@ fun EscPosToolbar(
     var isInvertedActive by remember { mutableStateOf(false) }
     var isDoubleHeightActive by remember { mutableStateOf(false) }
     var isDoubleWidthActive by remember { mutableStateOf(false) }
+
+    var isLeftAlignActive by remember { mutableStateOf(false) }
+    var isCenterAlignActive by remember { mutableStateOf(false) }
+    var isRightAlignActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         state.cursorDataFlow.collect { (position, cursorStyles, selection) ->
@@ -91,6 +85,12 @@ fun EscPosToolbar(
             
             // Check for double width (letter spacing)
             isDoubleWidthActive = styles.contains(configuration.doubleWidthStyle)
+
+            //commit Check for alignment markers on current line
+            val currentLine = state.textLines.getOrNull(position.line)?.text ?: ""
+            isLeftAlignActive = currentLine.trim().startsWith("|left|")
+            isCenterAlignActive = currentLine.trim().startsWith("|center|")
+            isRightAlignActive = currentLine.trim().startsWith("|right|")
         }
     }
 
@@ -220,26 +220,29 @@ fun EscPosToolbar(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 // Alignment controls
-                ToolbarButton(
-                    onClick = { insertAlignmentFormatting(state, "left") },
+                FormatButton(
+                    onClick = { insertAlignmentFormatting(state, "left", isLeftAlignActive) },
                     icon = Icons.AutoMirrored.Filled.FormatAlignLeft,
-                    contentDescription = "Left Align (|left|text)"
+                    contentDescription = "Left Align (|left|text)",
+                    isActive = isLeftAlignActive
                 )
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                ToolbarButton(
-                    onClick = { insertAlignmentFormatting(state, "center") },
+                FormatButton(
+                    onClick = { insertAlignmentFormatting(state, "center", isCenterAlignActive) },
                     icon = Icons.Default.FormatAlignCenter,
-                    contentDescription = "Center Align (|center|text)"
+                    contentDescription = "Center Align (|center|text)",
+                    isActive = isCenterAlignActive
                 )
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                ToolbarButton(
-                    onClick = { insertAlignmentFormatting(state, "right") },
+                FormatButton(
+                    onClick = { insertAlignmentFormatting(state, "right", isRightAlignActive) },
                     icon = Icons.AutoMirrored.Filled.FormatAlignRight,
-                    contentDescription = "Right Align (|right|text)"
+                    contentDescription = "Right Align (|right|text)",
+                    isActive = isRightAlignActive
                 )
             }
         }
@@ -248,30 +251,47 @@ fun EscPosToolbar(
 
 private fun insertAlignmentFormatting(
     state: TextEditorState,
-    alignment: String
+    alignment: String,
+    isActive: Boolean
 ) {
-    // Insert alignment at the beginning of the current line
     val cursorPos = state.cursor.position
-    val alignmentText = "|$alignment|"
 
-    // Check if alignment already exists at line start
-    val lineText = state.textLines[cursorPos.line].text
-    if (!lineText.trim().startsWith("|")) {
-        // Insert alignment at line start by replacing from beginning
-        val range = TextEditorRange(
-            CharLineOffset(cursorPos.line, 0),
-            CharLineOffset(cursorPos.line, 0)
-        )
-        state.replace(range, alignmentText)
+    if (isActive) {
+        // Remove existing alignment
+        val lineText = state.textLines[cursorPos.line].text
+        if (lineText.trim().startsWith("|")) {
+            val existingEnd = lineText.indexOf("|", 1) + 1
+            if (existingEnd > 0) {
+                val range = TextEditorRange(
+                    CharLineOffset(cursorPos.line, 0),
+                    CharLineOffset(cursorPos.line, existingEnd)
+                )
+                state.replace(range, "")
+            }
+        }
     } else {
-        // Replace existing alignment
-        val existingEnd = lineText.indexOf("|", 1) + 1
-        if (existingEnd > 0) {
+        // Insert alignment at the beginning of the current line
+        val alignmentText = "|$alignment|"
+
+        // Check if alignment already exists at line start
+        val lineText = state.textLines[cursorPos.line].text
+        if (!lineText.trim().startsWith("|")) {
+            // Insert alignment at line start by replacing from beginning
             val range = TextEditorRange(
                 CharLineOffset(cursorPos.line, 0),
-                CharLineOffset(cursorPos.line, existingEnd)
+                CharLineOffset(cursorPos.line, 0)
             )
             state.replace(range, alignmentText)
+        } else {
+            // Replace existing alignment
+            val existingEnd = lineText.indexOf("|", 1) + 1
+            if (existingEnd > 0) {
+                val range = TextEditorRange(
+                    CharLineOffset(cursorPos.line, 0),
+                    CharLineOffset(cursorPos.line, existingEnd)
+                )
+                state.replace(range, alignmentText)
+            }
         }
     }
 }
