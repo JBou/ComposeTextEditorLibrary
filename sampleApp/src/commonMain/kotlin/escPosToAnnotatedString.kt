@@ -1,5 +1,4 @@
 package com.darkrockstudios.texteditor.sampleapp
-
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -14,7 +13,7 @@ import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleWidthSpanStyle
 
 /**
  * Converts ESC/POS formatted text to AnnotatedString for display in editor.
- * Supports nested/overlapping markers using stack-based parsing.
+ * Parses each marker pair individually, applying styles to text between opening and closing markers.
  *
  * Supported syntax:
  * - **text** : Bold
@@ -39,130 +38,97 @@ fun String.toEscPosAnnotatedString(
 }
 
 /**
- * Stack-based parser for handling nested/overlapping markers.
- * Uses a marker stack to track currently open styles and applies them when closed.
+ * Parses ESC/POS formatted text and applies appropriate styles.
+ * Uses a recursive approach to handle nested markers correctly.
  */
 private fun AnnotatedString.Builder.parseEscPosTextWithStack(
     text: String,
     configuration: EscPosConfiguration
 ) {
-    data class ActiveStyle(val marker: String, val startIndex: Int, val spanStyle: SpanStyle?)
-    val styleStack = mutableListOf<ActiveStyle>()
+    parseEscPosTextRecursive(text, 0, text.length, configuration)
+}
 
-    var currentIndex = 0
-
-    while (currentIndex < text.length) {
+private fun AnnotatedString.Builder.parseEscPosTextRecursive(
+    text: String,
+    start: Int,
+    end: Int,
+    configuration: EscPosConfiguration
+) {
+    var currentIndex = start
+    
+    while (currentIndex < end) {
         when {
-            // Alignment: |left|text, |center|text, |right|text
+            // Alignment markers - skip them entirely
             text.startsWith("|", currentIndex) -> {
                 val pipeEndIndex = text.indexOf("|", currentIndex + 1)
-                if (pipeEndIndex != -1) {
+                if (pipeEndIndex != -1 && pipeEndIndex < end) {
                     val alignmentType = text.substring(currentIndex + 1, pipeEndIndex)
                     if (alignmentType in listOf("left", "center", "right")) {
-                        // Store alignment for export
-                        styleStack.add(ActiveStyle("|$alignmentType|", currentIndex, null))
-                        
-                        // Skip alignment markers and just show content
                         currentIndex = pipeEndIndex + 1
-                    } else {
-                        // Not a valid alignment marker, treat as regular text
-                        append(text[currentIndex])
-                        currentIndex++
+                        continue
                     }
-                } else {
-                    append(text[currentIndex])
-                    currentIndex++
                 }
-            }
-
-            // Bold: **text**
-            text.startsWith("**", currentIndex) -> {
-                val endIndex = text.indexOf("**", currentIndex + 2)
-                if (endIndex != -1) {
-                    styleStack.add(ActiveStyle("**", currentIndex, SpanStyle(fontWeight = FontWeight.Bold)))
-                    currentIndex = endIndex + 2
-                } else {
-                    append(text[currentIndex])
-                    currentIndex++
-                }
-            }
-
-            // Underline: __text__
-            text.startsWith("__", currentIndex) -> {
-                val endIndex = text.indexOf("__", currentIndex + 2)
-                if (endIndex != -1) {
-                    styleStack.add(ActiveStyle("__", currentIndex, SpanStyle(textDecoration = TextDecoration.Underline)))
-                    currentIndex = endIndex + 2
-                } else {
-                    append(text[currentIndex])
-                    currentIndex++
-                }
-            }
-
-            // Inverted: ~~text~~
-            text.startsWith("~~", currentIndex) -> {
-                val endIndex = text.indexOf("~~", currentIndex + 2)
-                if (endIndex != -1) {
-                    styleStack.add(ActiveStyle("~~", currentIndex, SpanStyle(
-                        color = configuration.invertedTextColor,
-                        background = configuration.invertedBackgroundColor
-                    )))
-                    currentIndex = endIndex + 2
-                } else {
-                    append(text[currentIndex])
-                    currentIndex++
-                }
-            }
-
-            // Double height: ##text##
-            text.startsWith("##", currentIndex) -> {
-                val endIndex = text.indexOf("##", currentIndex + 2)
-                if (endIndex != -1) {
-                    styleStack.add(ActiveStyle("##", currentIndex, SpanStyle(
-                        fontSize = configuration.defaultTextStyle.fontSize * configuration.doubleHeightScale
-                    )))
-                    currentIndex = endIndex + 2
-                } else {
-                    append(text[currentIndex])
-                    currentIndex++
-                }
-            }
-
-            // Double width: %%text%%
-            text.startsWith("%%", currentIndex) -> {
-                val endIndex = text.indexOf("%%", currentIndex + 2)
-                if (endIndex != -1) {
-                    styleStack.add(ActiveStyle("%%", currentIndex, SpanStyle(
-                        letterSpacing = configuration.defaultTextStyle.fontSize * configuration.doubleWidthScale
-                    )))
-                    currentIndex = endIndex + 2
-                } else {
-                    append(text[currentIndex])
-                    currentIndex++
-                }
-            }
-
-            // Double underline: ++text++
-            text.startsWith("++", currentIndex) -> {
-                val endIndex = text.indexOf("++", currentIndex + 2)
-                if (endIndex != -1) {
-                    styleStack.add(ActiveStyle("++", currentIndex, SpanStyle(
-                        textDecoration = TextDecoration.Underline,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = configuration.defaultTextStyle.fontSize * 1.05f
-                    )))
-                    currentIndex = endIndex + 2
-                } else {
-                    append(text[currentIndex])
-                    currentIndex++
-                }
-            }
-
-            // Regular text (not part of any marker)
-            else -> {
                 append(text[currentIndex])
                 currentIndex++
             }
+            
+            // Check for any marker at current position
+            else -> {
+                val marker = findMarkerAtPosition(text, currentIndex, end)
+                if (marker != null) {
+                    val (markerType, markerEnd) = marker
+                    
+                    // Apply the style to the content between markers
+                    val contentStart = currentIndex + 2
+                    val contentEnd = markerEnd - 2
+                    
+                    if (contentStart < contentEnd) {
+                        withStyle(getStyleForMarker(markerType, configuration)) {
+                            // Recursively parse the content between markers
+                            parseEscPosTextRecursive(text, contentStart, contentEnd, configuration)
+                        }
+                    }
+                    
+                    currentIndex = markerEnd
+                } else {
+                    // Regular text
+                    append(text[currentIndex])
+                    currentIndex++
+                }
+            }
         }
+    }
+}
+
+private fun findMarkerAtPosition(text: String, index: Int, maxEnd: Int): Pair<String, Int>? {
+    val markers = listOf("**", "__", "~~", "##", "%%", "++")
+    
+    for (marker in markers) {
+        if (text.startsWith(marker, index)) {
+            val endIndex = text.indexOf(marker, index + 2)
+            if (endIndex != -1 && endIndex + marker.length <= maxEnd) {
+                return Pair(marker, endIndex + marker.length)
+            }
+        }
+    }
+    return null
+}
+
+private fun getStyleForMarker(marker: String, config: EscPosConfiguration): SpanStyle {
+    return when (marker) {
+        "**" -> SpanStyle(fontWeight = FontWeight.Bold)
+        "__" -> SpanStyle(textDecoration = TextDecoration.Underline)
+        "~~" -> SpanStyle(
+            color = config.invertedTextColor,
+            background = config.invertedBackgroundColor
+        )
+        "##" -> SpanStyle(fontSize = config.defaultTextStyle.fontSize * config.doubleHeightScale)
+        "%%" -> SpanStyle(letterSpacing = config.defaultTextStyle.fontSize * config.doubleWidthScale)
+        "++" -> SpanStyle(
+            textDecoration = TextDecoration.Underline,
+            fontWeight = FontWeight.Bold,
+            fontSize = config.defaultTextStyle.fontSize * 1.05f
+        )
+        else -> SpanStyle()
     }
 }
