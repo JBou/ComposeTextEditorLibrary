@@ -3,7 +3,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
@@ -12,12 +11,9 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.FormatAlignCenter
 import androidx.compose.material.icons.filled.FormatBold
-import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.InvertColors
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -28,27 +24,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.darkrockstudios.texteditor.CharLineOffset
 import com.darkrockstudios.texteditor.TextEditorRange
 import com.darkrockstudios.texteditor.richstyle.RichSpanStyle
 import com.darkrockstudios.texteditor.sampleapp.EscPosConfiguration
 import com.darkrockstudios.texteditor.sampleapp.EscPosExtension
+import com.darkrockstudios.texteditor.sampleapp.common.FormatButton
+import com.darkrockstudios.texteditor.sampleapp.common.ToolbarButton
+import com.darkrockstudios.texteditor.sampleapp.common.toggleStyle
 import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleUnderlineSpanStyle
 import com.darkrockstudios.texteditor.state.TextEditorState
 import com.darkrockstudios.texteditor.state.getRichSpansAtPosition
 import com.darkrockstudios.texteditor.state.getRichSpansInRange
 import com.darkrockstudios.texteditor.state.getSpanStylesInRange
-import com.darkrockstudios.texteditor.sampleapp.common.FormatButton
-import com.darkrockstudios.texteditor.sampleapp.common.ToolbarButton
-import com.darkrockstudios.texteditor.sampleapp.common.toggleStyle
-import kotlin.reflect.KClass
+
+val DOUBLEUNDERLINESPANSTYLE = DoubleUnderlineSpanStyle()
 
 @Composable
 fun EscPosToolbar(
@@ -162,7 +157,7 @@ fun EscPosToolbar(
 
                 FormatButton(
                     onClick = {
-                        toggleRichStyle(state, isDoubleUnderlineActive, DoubleUnderlineSpanStyle(), DoubleUnderlineSpanStyle::class)
+                        toggleRichStyle(state, isDoubleUnderlineActive, DOUBLEUNDERLINESPANSTYLE)
                     },
                     icon = Icons.Default.FormatUnderlined,
                     contentDescription = "Double Underline (++text++)",
@@ -296,46 +291,13 @@ private fun toggleRichStyle(
     state: TextEditorState,
     isActive: Boolean,
     richSpanStyle: RichSpanStyle,
-    styleClass: KClass<out RichSpanStyle>
 ) {
-    val selection = state.selector.selection
-    if (selection != null) {
-        // Remove all existing spans of this type in the range
-        val existingSpans = state.getRichSpansInRange(selection)
-            .filter { styleClass.isInstance(it.style) }
-        existingSpans.forEach { span ->
-            state.removeRichSpan(span.range.start, span.range.end, span.style)
-        }
-
-        // Add new span if toggling on
-        if (!isActive) {
-            state.addRichSpan(selection.start, selection.end, richSpanStyle)
-        }
-
-        // Force cursor movement to trigger state update
-        state.cursor.moveRight()
-        state.cursor.moveLeft()
-    } else {
-        // Handle cursor position case
-        val cursorPos = state.cursor.position
-        val richSpans = state.getRichSpansAtPosition(cursorPos)
-        val hasStyle = richSpans.any { styleClass.isInstance(it.style) }
-
-        if (hasStyle) {
-            // Remove existing spans at cursor
-            richSpans.filter { styleClass.isInstance(it.style) }
-                .forEach { span ->
-                    state.removeRichSpan(span.range.start, span.range.end, span.style)
-                }
+    state.selector.selection?.let { range ->
+        if (isActive) {
+            state.removeRichSpan(range.start, range.end, richSpanStyle)
         } else {
-            // Insert at cursor with placeholder
-            state.insertStringAtCursor("++text++")
-            // Move cursor inside for editing
-            val newCursorPos = state.cursor.position
-            state.selector.updateSelection(
-                CharLineOffset(newCursorPos.line, newCursorPos.char - 4),
-                CharLineOffset(newCursorPos.line, newCursorPos.char - 2)
-            )
+            state.addRichSpan(range.start, range.end, richSpanStyle)
         }
+        state.cursor.updatePosition(state.cursor.position)
     }
 }

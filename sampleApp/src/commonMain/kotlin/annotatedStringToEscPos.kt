@@ -4,15 +4,20 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import com.darkrockstudios.texteditor.CharLineOffset
-import com.darkrockstudios.texteditor.TextEditorRange
+import androidx.compose.ui.unit.sp
 import com.darkrockstudios.texteditor.sampleapp.richstyle.AlignmentSpanStyle
 import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleUnderlineSpanStyle
+import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleWidthSpanStyle
+import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleHeightSpanStyle
 
 /**
  * Converts an AnnotatedString to an ESC/POS formatted string.
  * Handles bold, underline, inverted, double height, double width, and alignment styles.
- * Only converts styles that match our supported ESC/POS styles.
+ * Supports nested/overlapping markers correctly.
+ *
+ * NOTE: Special characters in text content are NOT escaped.
+ * Users must manually escape if they want literal asterisks, tildes, etc.
+ * Example: To type "*hello*" literally, escape it as "\*hello\*"
  */
 fun AnnotatedString.toEscPos(
     configuration: EscPosConfiguration = EscPosConfiguration.DEFAULT,
@@ -24,7 +29,7 @@ fun AnnotatedString.toEscPos(
     data class StyleBoundary(
         val index: Int,
         val isStart: Boolean,
-        val marker: StyleMarkerPair,
+        val marker: String,
         val priority: Int
     )
 
@@ -33,16 +38,16 @@ fun AnnotatedString.toEscPos(
     // Process regular span styles
     spanStyles.forEach { span ->
         val marker = getStyleMarker(span.item, configuration) ?: return@forEach
-        boundaries.add(StyleBoundary(span.start, true, marker, 0))
-        boundaries.add(StyleBoundary(span.end, false, marker, 0))
+        boundaries.add(StyleBoundary(span.start, true, marker.openMarker, 0))
+        boundaries.add(StyleBoundary(span.end, false, marker.closeMarker, 0))
     }
 
     // Process rich span styles (double underline, alignment)
     richSpanInfo.forEach { richSpan ->
         when (richSpan.style) {
             is DoubleUnderlineSpanStyle -> {
-                boundaries.add(StyleBoundary(richSpan.start, true, StyleMarkerPair("++", "++"), 1))
-                boundaries.add(StyleBoundary(richSpan.end, false, StyleMarkerPair("++", "++"), 1))
+                boundaries.add(StyleBoundary(richSpan.start, true, "++", 1))
+                boundaries.add(StyleBoundary(richSpan.end, false, "++", 1))
             }
             is AlignmentSpanStyle -> {
                 val alignTag = when (richSpan.style.getTextAlign()) {
@@ -51,8 +56,16 @@ fun AnnotatedString.toEscPos(
                     androidx.compose.ui.text.style.TextAlign.Right -> "|right|"
                     else -> "|left|"
                 }
-                // Alignment is just a prefix at the line start
-                boundaries.add(StyleBoundary(richSpan.start, true, StyleMarkerPair(alignTag, ""), 1))
+                // Alignment is just a prefix at line start
+                boundaries.add(StyleBoundary(richSpan.start, true, alignTag, 1))
+            }
+            is DoubleHeightSpanStyle -> {
+                boundaries.add(StyleBoundary(richSpan.start, true, "##", 1))
+                boundaries.add(StyleBoundary(richSpan.end, false, "##", 1))
+            }
+            is DoubleWidthSpanStyle -> {
+                boundaries.add(StyleBoundary(richSpan.start, true, "%%", 1))
+                boundaries.add(StyleBoundary(richSpan.end, false, "%%", 1))
             }
         }
     }
@@ -64,23 +77,25 @@ fun AnnotatedString.toEscPos(
     var currentIndex = 0
 
     boundaries.forEach { boundary ->
-        // Add any text between last position and this boundary
+        // Add any text between last position and this boundary (NOT escaped)
         while (currentIndex < boundary.index) {
-            result.append(escapeEscPosChar(text[currentIndex]))
+            result.append(text[currentIndex])
             currentIndex++
         }
 
-        // Add appropriate marker
+        // Add marker directly (NOT escaped - markers should never be escaped)
         if (boundary.isStart) {
-            result.append(boundary.marker.openMarker)
-        } else {
-            result.append(boundary.marker.closeMarker)
+            result.append(boundary.marker)
+        }
+        // Close markers for rich spans without closing tag (alignment)
+        if (!boundary.isStart && boundary.marker.isNotEmpty()) {
+            result.append(boundary.marker)
         }
     }
 
-    // Add any remaining text
+    // Add any remaining text (NOT escaped)
     while (currentIndex < text.length) {
-        result.append(escapeEscPosChar(text[currentIndex]))
+        result.append(text[currentIndex])
         currentIndex++
     }
 
@@ -94,6 +109,11 @@ data class RichSpanExportInfo(
     val start: Int,
     val end: Int,
     val style: com.darkrockstudios.texteditor.richstyle.RichSpanStyle
+)
+
+private data class StyleMarkerPair(
+    val openMarker: String,
+    val closeMarker: String
 )
 
 private fun getStyleMarker(
@@ -127,19 +147,3 @@ private fun getStyleMarker(
 
     return null
 }
-
-/**
- * Escapes special characters that could be misinterpreted as ESC/POS markup.
- * Characters that need escaping: *, _, ~, #, %, +, |, \
- */
-private fun escapeEscPosChar(char: Char): String {
-    return when (char) {
-        '*', '_', '~', '#', '%', '+', '|', '\\' -> "\\$char"
-        else -> char.toString()
-    }
-}
-
-private data class StyleMarkerPair(
-    val openMarker: String,
-    val closeMarker: String
-)

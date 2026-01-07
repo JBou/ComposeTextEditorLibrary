@@ -21,7 +21,7 @@ class EscPosExtension(
     fun exportAsEscPosText(): String {
         val allText = editorState.getAllText()
 
-        // Collect rich spans (double underline, alignment)
+        // Collect all rich spans (double underline, alignment, double height, double width)
         val richSpans = editorState.richSpanManager.getAllRichSpans()
         val richSpanInfo = richSpans.map { richSpan ->
             RichSpanExportInfo(
@@ -32,14 +32,6 @@ class EscPosExtension(
         }
 
         return allText.toEscPos(escPosConfiguration, richSpanInfo)
-    }
-
-    /**
-     * Import ESC/POS formatted text
-     */
-    fun importEscPosText(escPosText: String) {
-        val annotatedString = escPosText.toEscPosAnnotatedString(escPosConfiguration)
-        editorState.setText(annotatedString)
     }
 
     override fun equals(other: Any?): Boolean {

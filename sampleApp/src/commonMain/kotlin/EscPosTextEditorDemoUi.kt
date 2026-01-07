@@ -39,8 +39,14 @@ fun EscPosTextEditorDemoUi(
     val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
-        state.editOperations.collect { operation ->
-            // Update exported markup whenever text is edited
+        exportedMarkup = escPosExtension.exportAsEscPosText()
+        state.editOperations.collect { _ ->
+            exportedMarkup = escPosExtension.exportAsEscPosText()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        state.cursorDataFlow.collect { _ ->
             exportedMarkup = escPosExtension.exportAsEscPosText()
         }
     }
