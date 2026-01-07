@@ -37,7 +37,6 @@ data class EscPosConfiguration(
     val shadowOffset: Float = 1.5f,
     val shadowBlurRadius: Float = 0f,
     val shadowStyle: SpanStyle = SpanStyle(
-        fontWeight = FontWeight.Normal,
         shadow = Shadow(
             offset = Offset(shadowOffset, 0f), // horizontal offset
             blurRadius = shadowBlurRadius

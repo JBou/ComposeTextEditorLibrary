@@ -11,9 +11,6 @@ class EscPosExtension(
     initialConfiguration: EscPosConfiguration = EscPosConfiguration.DEFAULT
 ) {
     var escPosConfiguration: EscPosConfiguration = initialConfiguration
-        set(value) {
-            field = value
-        }
 
     /**
      * Export the current text as ESC/POS formatted string
