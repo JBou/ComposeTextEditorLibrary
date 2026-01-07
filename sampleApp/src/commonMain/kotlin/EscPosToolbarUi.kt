@@ -11,9 +11,13 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.FormatAlignCenter
 import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
+import androidx.compose.material.icons.filled.Height
 import androidx.compose.material.icons.filled.InvertColors
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -29,21 +33,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
 import com.darkrockstudios.texteditor.CharLineOffset
 import com.darkrockstudios.texteditor.TextEditorRange
-import com.darkrockstudios.texteditor.richstyle.RichSpanStyle
 import com.darkrockstudios.texteditor.sampleapp.EscPosConfiguration
 import com.darkrockstudios.texteditor.sampleapp.EscPosExtension
 import com.darkrockstudios.texteditor.sampleapp.common.FormatButton
 import com.darkrockstudios.texteditor.sampleapp.common.ToolbarButton
 import com.darkrockstudios.texteditor.sampleapp.common.toggleStyle
-import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleUnderlineSpanStyle
 import com.darkrockstudios.texteditor.state.TextEditorState
 import com.darkrockstudios.texteditor.state.getRichSpansAtPosition
 import com.darkrockstudios.texteditor.state.getRichSpansInRange
 import com.darkrockstudios.texteditor.state.getSpanStylesInRange
 
-val DOUBLEUNDERLINESPANSTYLE = DoubleUnderlineSpanStyle()
+// Centralized SpanStyle definitions for reuse across parsing, toolbar, and export
+private fun getShadowSpanStyle(escPosConfiguration: EscPosConfiguration): SpanStyle {
+    return SpanStyle(
+        fontWeight = FontWeight.Normal,
+        shadow = Shadow(
+            offset = Offset(0f, escPosConfiguration.shadowOffset), // vertical offset
+            blurRadius = escPosConfiguration.shadowBlurRadius
+        )
+    )
+}
 
 @Composable
 fun EscPosToolbar(
@@ -54,7 +67,7 @@ fun EscPosToolbar(
 
     var isBoldActive by remember { mutableStateOf(false) }
     var isUnderlineActive by remember { mutableStateOf(false) }
-    var isDoubleUnderlineActive by remember { mutableStateOf(false) }
+    var isDoubleStrikeActive by remember { mutableStateOf(false) }
     var isInvertedActive by remember { mutableStateOf(false) }
     var isDoubleHeightActive by remember { mutableStateOf(false) }
     var isDoubleWidthActive by remember { mutableStateOf(false) }
@@ -67,34 +80,18 @@ fun EscPosToolbar(
                 cursorStyles
             }
 
-            val richSpans = if (selection != null) {
-                state.getRichSpansInRange(selection)
-            } else {
-                state.getRichSpansAtPosition(position)
-            }
-
-            isBoldActive = styles.contains(SpanStyle(fontWeight = FontWeight.Bold))
-            isUnderlineActive = styles.contains(SpanStyle(textDecoration = TextDecoration.Underline))
-            
-            isDoubleUnderlineActive = richSpans.any { 
-                it.style is DoubleUnderlineSpanStyle 
-            }
-            
-            // Check for inverted colors (background check is more reliable)
             val configuration = EscPosConfiguration.DEFAULT
-            isInvertedActive = styles.any { it.background == configuration.invertedBackgroundColor }
+            isBoldActive = styles.contains(configuration.boldStyle)
+            isUnderlineActive = styles.contains(configuration.underlineStyle)
+            isDoubleStrikeActive = styles.contains(configuration.shadowStyle)
+            // Check for inverted colors (background check is more reliable)
+            isInvertedActive = styles.contains(configuration.invertedStyle)
 
             // Check for double height (fontSize * 2)
-            isDoubleHeightActive = styles.any { 
-                it.fontSize != TextUnit.Unspecified && 
-                it.fontSize.value > configuration.defaultTextStyle.fontSize.value * 1.5f 
-            }
+            isDoubleHeightActive = styles.contains(configuration.doubleHeightStyle)
             
             // Check for double width (letter spacing)
-            isDoubleWidthActive = styles.any { 
-                it.letterSpacing != TextUnit.Unspecified && 
-                it.letterSpacing.value > 0.3f 
-            }
+            isDoubleWidthActive = styles.contains(configuration.doubleWidthStyle)
         }
     }
 
@@ -135,7 +132,7 @@ fun EscPosToolbar(
                 // Basic formatting
                 FormatButton(
                     onClick = {
-                        toggleStyle(state, isBoldActive, SpanStyle(fontWeight = FontWeight.Bold))
+                        toggleStyle(state, isBoldActive, EscPosConfiguration.DEFAULT.boldStyle)
                     },
                     icon = Icons.Default.FormatBold,
                     contentDescription = "Bold (**text**)",
@@ -146,7 +143,7 @@ fun EscPosToolbar(
 
                 FormatButton(
                     onClick = {
-                        toggleStyle(state, isUnderlineActive, SpanStyle(textDecoration = TextDecoration.Underline))
+                        toggleStyle(state, isUnderlineActive, EscPosConfiguration.DEFAULT.underlineStyle)
                     },
                     icon = Icons.Default.FormatUnderlined,
                     contentDescription = "Underline (__text__)",
@@ -157,11 +154,11 @@ fun EscPosToolbar(
 
                 FormatButton(
                     onClick = {
-                        toggleRichStyle(state, isDoubleUnderlineActive, DOUBLEUNDERLINESPANSTYLE)
+                        toggleStyle(state, isDoubleStrikeActive, EscPosConfiguration.DEFAULT.shadowStyle)
                     },
-                    icon = Icons.Default.FormatUnderlined,
-                    contentDescription = "Double Underline (++text++)",
-                    isActive = isDoubleUnderlineActive
+                    icon = Icons.Default.FormatItalic,
+                    contentDescription = "Double Strike (++text++)",
+                    isActive = isDoubleStrikeActive
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -177,10 +174,7 @@ fun EscPosToolbar(
                         toggleStyle(
                             state, 
                             isInvertedActive, 
-                            SpanStyle(
-                                color = configuration.invertedTextColor,
-                                background = configuration.invertedBackgroundColor
-                            )
+                            configuration.invertedStyle
                         )
                     },
                     icon = Icons.Default.InvertColors,
@@ -196,12 +190,10 @@ fun EscPosToolbar(
                         toggleStyle(
                             state, 
                             isDoubleHeightActive, 
-                            SpanStyle(
-                                fontSize = configuration.defaultTextStyle.fontSize * configuration.doubleHeightScale
-                            )
+                            configuration.doubleHeightStyle
                         )
                     },
-                    icon = Icons.Default.FormatSize,
+                    icon = Icons.Default.SwapVert,
                     contentDescription = "Double Height (##text##)",
                     isActive = isDoubleHeightActive
                 )
@@ -214,12 +206,10 @@ fun EscPosToolbar(
                         toggleStyle(
                             state, 
                             isDoubleWidthActive, 
-                            SpanStyle(
-                                letterSpacing = configuration.defaultTextStyle.fontSize * configuration.doubleWidthScale
-                            )
+                            configuration.doubleWidthStyle
                         )
                     },
-                    icon = Icons.Default.FormatSize,
+                    icon = Icons.Default.SwapHoriz,
                     contentDescription = "Double Width (%%text%%)",
                     isActive = isDoubleWidthActive
                 )
@@ -284,20 +274,5 @@ private fun insertAlignmentFormatting(
             )
             state.replace(range, alignmentText)
         }
-    }
-}
-
-private fun toggleRichStyle(
-    state: TextEditorState,
-    isActive: Boolean,
-    richSpanStyle: RichSpanStyle,
-) {
-    state.selector.selection?.let { range ->
-        if (isActive) {
-            state.removeRichSpan(range.start, range.end, richSpanStyle)
-        } else {
-            state.addRichSpan(range.start, range.end, richSpanStyle)
-        }
-        state.cursor.updatePosition(state.cursor.position)
     }
 }

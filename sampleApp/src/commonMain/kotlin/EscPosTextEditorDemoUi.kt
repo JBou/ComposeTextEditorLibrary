@@ -45,12 +45,6 @@ fun EscPosTextEditorDemoUi(
         }
     }
 
-    LaunchedEffect(Unit) {
-        state.cursorDataFlow.collect { _ ->
-            exportedMarkup = escPosExtension.exportAsEscPosText()
-        }
-    }
-
     Column(modifier = modifier) {
         Row {
             Text(

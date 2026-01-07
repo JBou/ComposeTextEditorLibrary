@@ -21,17 +21,7 @@ class EscPosExtension(
     fun exportAsEscPosText(): String {
         val allText = editorState.getAllText()
 
-        // Collect all rich spans (double underline, alignment, double height, double width)
-        val richSpans = editorState.richSpanManager.getAllRichSpans()
-        val richSpanInfo = richSpans.map { richSpan ->
-            RichSpanExportInfo(
-                start = editorState.getCharacterIndex(richSpan.range.start),
-                end = editorState.getCharacterIndex(richSpan.range.end),
-                style = richSpan.style
-            )
-        }
-
-        return allText.toEscPos(escPosConfiguration, richSpanInfo)
+        return allText.toEscPos(escPosConfiguration)
     }
 
     override fun equals(other: Any?): Boolean {

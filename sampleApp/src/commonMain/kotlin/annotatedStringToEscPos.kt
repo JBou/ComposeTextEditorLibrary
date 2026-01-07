@@ -5,10 +5,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
-import com.darkrockstudios.texteditor.sampleapp.richstyle.AlignmentSpanStyle
-import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleUnderlineSpanStyle
-import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleWidthSpanStyle
-import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleHeightSpanStyle
+import com.darkrockstudios.texteditor.sampleapp.EscPosConfiguration
 
 /**
  * Converts an AnnotatedString to an ESC/POS formatted string.
@@ -20,8 +17,7 @@ import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleHeightSpanStyle
  * Example: To type "*hello*" literally, escape it as "\*hello\*"
  */
 fun AnnotatedString.toEscPos(
-    configuration: EscPosConfiguration = EscPosConfiguration.DEFAULT,
-    richSpanInfo: List<RichSpanExportInfo> = emptyList()
+    configuration: EscPosConfiguration = EscPosConfiguration.DEFAULT
 ): String {
     if (text.isEmpty()) return ""
 
@@ -42,35 +38,7 @@ fun AnnotatedString.toEscPos(
         boundaries.add(StyleBoundary(span.end, false, marker.closeMarker, 0))
     }
 
-    // Process rich span styles (double underline, alignment)
-    richSpanInfo.forEach { richSpan ->
-        when (richSpan.style) {
-            is DoubleUnderlineSpanStyle -> {
-                boundaries.add(StyleBoundary(richSpan.start, true, "++", 1))
-                boundaries.add(StyleBoundary(richSpan.end, false, "++", 1))
-            }
-            is AlignmentSpanStyle -> {
-                val alignTag = when (richSpan.style.getTextAlign()) {
-                    androidx.compose.ui.text.style.TextAlign.Left -> "|left|"
-                    androidx.compose.ui.text.style.TextAlign.Center -> "|center|"
-                    androidx.compose.ui.text.style.TextAlign.Right -> "|right|"
-                    else -> "|left|"
-                }
-                // Alignment is just a prefix at line start
-                boundaries.add(StyleBoundary(richSpan.start, true, alignTag, 1))
-            }
-            is DoubleHeightSpanStyle -> {
-                boundaries.add(StyleBoundary(richSpan.start, true, "##", 1))
-                boundaries.add(StyleBoundary(richSpan.end, false, "##", 1))
-            }
-            is DoubleWidthSpanStyle -> {
-                boundaries.add(StyleBoundary(richSpan.start, true, "%%", 1))
-                boundaries.add(StyleBoundary(richSpan.end, false, "%%", 1))
-            }
-        }
-    }
-
-    // Sort boundaries by position, then by priority (rich spans first)
+    // Sort boundaries by position, then by priority
     boundaries.sortWith(compareBy<StyleBoundary> { it.index }.thenBy { it.priority })
 
     val result = StringBuilder()
@@ -87,7 +55,6 @@ fun AnnotatedString.toEscPos(
         if (boundary.isStart) {
             result.append(boundary.marker)
         }
-        // Close markers for rich spans without closing tag (alignment)
         if (!boundary.isStart && boundary.marker.isNotEmpty()) {
             result.append(boundary.marker)
         }
@@ -102,15 +69,6 @@ fun AnnotatedString.toEscPos(
     return result.toString()
 }
 
-/**
- * Data class for rich span export information
- */
-data class RichSpanExportInfo(
-    val start: Int,
-    val end: Int,
-    val style: com.darkrockstudios.texteditor.richstyle.RichSpanStyle
-)
-
 private data class StyleMarkerPair(
     val openMarker: String,
     val closeMarker: String
@@ -120,7 +78,7 @@ private fun getStyleMarker(
     style: SpanStyle,
     config: EscPosConfiguration
 ): StyleMarkerPair? {
-    // Check for inverted colors (background color check)
+    // Check for inverted colors (background check is more reliable)
     if (style.background == config.invertedBackgroundColor) {
         return StyleMarkerPair("~~", "~~")
     }
@@ -143,6 +101,11 @@ private fun getStyleMarker(
     // Check for double width
     if (style.letterSpacing.value > 0.1f) {
         return StyleMarkerPair("%%", "%%")
+    }
+
+    // Check for shadow (double strike)
+    if (style.shadow == config.shadowStyle.shadow) {
+        return StyleMarkerPair("++", "++")
     }
 
     return null

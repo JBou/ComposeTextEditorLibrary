@@ -6,10 +6,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
-import com.darkrockstudios.texteditor.sampleapp.richstyle.AlignmentSpanStyle
-import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleUnderlineSpanStyle
-import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleHeightSpanStyle
-import com.darkrockstudios.texteditor.sampleapp.richstyle.DoubleWidthSpanStyle
 
 /**
  * Converts ESC/POS formatted text to AnnotatedString for display in editor.
@@ -116,19 +112,12 @@ private fun findMarkerAtPosition(text: String, index: Int, maxEnd: Int): Pair<St
 
 private fun getStyleForMarker(marker: String, config: EscPosConfiguration): SpanStyle {
     return when (marker) {
-        "**" -> SpanStyle(fontWeight = FontWeight.Bold)
-        "__" -> SpanStyle(textDecoration = TextDecoration.Underline)
-        "~~" -> SpanStyle(
-            color = config.invertedTextColor,
-            background = config.invertedBackgroundColor
-        )
-        "##" -> SpanStyle(fontSize = config.defaultTextStyle.fontSize * config.doubleHeightScale)
-        "%%" -> SpanStyle(letterSpacing = config.defaultTextStyle.fontSize * config.doubleWidthScale)
-        "++" -> SpanStyle(
-            textDecoration = TextDecoration.Underline,
-            fontWeight = FontWeight.Bold,
-            fontSize = config.defaultTextStyle.fontSize * 1.05f
-        )
+        "**" -> config.boldStyle
+        "__" -> config.underlineStyle
+        "~~" -> config.invertedStyle
+        "##" -> config.doubleHeightStyle
+        "%%" -> config.doubleWidthStyle
+        "++" -> config.shadowStyle
         else -> SpanStyle()
     }
 }
