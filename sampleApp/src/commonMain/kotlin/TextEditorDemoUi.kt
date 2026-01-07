@@ -48,7 +48,7 @@ fun TextEditorDemoUi(
 	}
 	val markdownExtension = remember(state, configuration) { state.withMarkdown(configuration) }
 
-	LaunchedEffect(Unit) {
+		LaunchedEffect(Unit) {
 		if (demoContent == DemoContent.Rich) {
 			//state.selector.updateSelection(CharLineOffset(0, 10), CharLineOffset(0, 20))
 			state.addRichSpan(6, 11, HIGHLIGHT)
@@ -58,7 +58,7 @@ fun TextEditorDemoUi(
 		}
 
 		state.editOperations.collect { operation ->
-			println("Applying Operation: $operation")
+			// Edit operations are collected for potential future use
 		}
 	}
 
@@ -94,9 +94,9 @@ fun TextEditorDemoUi(
 			style = style,
 			onRichSpanClick = { span, clickType, _ ->
 				when (clickType) {
-					SpanClickType.TAP -> println("Touch tap on span: $span")
-					SpanClickType.PRIMARY_CLICK -> println("Left click on span: $span")
-					SpanClickType.SECONDARY_CLICK -> println("Right click on span: $span")
+					SpanClickType.TAP -> { /* Rich span tapped */ }
+					SpanClickType.PRIMARY_CLICK -> { /* Rich span left clicked */ }
+					SpanClickType.SECONDARY_CLICK -> { /* Rich span right clicked */ }
 				}
 				true
 			}

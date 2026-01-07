@@ -1,4 +1,3 @@
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,9 +14,7 @@ import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
@@ -29,15 +26,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.dp
 import com.darkrockstudios.texteditor.markdown.MarkdownExtension
 import com.darkrockstudios.texteditor.state.TextEditorState
 import com.darkrockstudios.texteditor.state.getRichSpansAtPosition
 import com.darkrockstudios.texteditor.state.getRichSpansInRange
 import com.darkrockstudios.texteditor.state.getSpanStylesInRange
+import com.darkrockstudios.texteditor.sampleapp.common.FormatButton
+import com.darkrockstudios.texteditor.sampleapp.common.ToolbarButton
+import com.darkrockstudios.texteditor.sampleapp.common.toggleStyle
 import markdown.decreaseFontSize
 import markdown.increaseFontSize
 
@@ -183,79 +180,3 @@ fun TextEditorToolbar(
 	}
 }
 
-private fun toggleStyle(
-	state: TextEditorState,
-	isActive: Boolean,
-	spanStyle: SpanStyle
-) {
-	val selection = state.selector.selection
-	if (selection != null) {
-		if (isActive) {
-			state.removeStyleSpan(selection, spanStyle)
-		} else {
-			state.addStyleSpan(selection, spanStyle)
-		}
-	} else {
-		if (isActive) {
-			state.cursor.removeStyle(spanStyle)
-		} else {
-			state.cursor.addStyle(spanStyle)
-		}
-	}
-}
-
-@Composable
-private fun ToolbarButton(
-	onClick: () -> Unit,
-	icon: ImageVector,
-	contentDescription: String,
-	isActive: Boolean = false,
-	enabled: Boolean = true,
-	modifier: Modifier = Modifier
-) {
-	FilledTonalIconButton(
-		onClick = onClick,
-		enabled = enabled,
-		modifier = modifier
-			.size(32.dp)
-			.focusable(false)
-			.focusProperties {
-				canFocus = false
-			},
-		colors = IconButtonDefaults.filledTonalIconButtonColors(
-			containerColor = if (isActive)
-				MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-			else
-				MaterialTheme.colorScheme.surfaceVariant,
-			contentColor = if (isActive)
-				MaterialTheme.colorScheme.primary
-			else
-				MaterialTheme.colorScheme.onSurfaceVariant,
-			disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
-			disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-		)
-	) {
-		Icon(
-			imageVector = icon,
-			contentDescription = contentDescription,
-			modifier = Modifier.size(20.dp)
-		)
-	}
-}
-
-@Composable
-private fun FormatButton(
-	onClick: () -> Unit,
-	icon: ImageVector,
-	contentDescription: String,
-	isActive: Boolean,
-	enabled: Boolean = true
-) {
-	ToolbarButton(
-		onClick = onClick,
-		icon = icon,
-		contentDescription = contentDescription,
-		isActive = isActive,
-		enabled = enabled
-	)
-}

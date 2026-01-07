@@ -11,16 +11,12 @@ import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.FormatAlignCenter
-import androidx.compose.material.icons.filled.FormatAlignLeft
-import androidx.compose.material.icons.filled.FormatAlignRight
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.InvertColors
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
@@ -49,6 +45,9 @@ import com.darkrockstudios.texteditor.state.TextEditorState
 import com.darkrockstudios.texteditor.state.getRichSpansAtPosition
 import com.darkrockstudios.texteditor.state.getRichSpansInRange
 import com.darkrockstudios.texteditor.state.getSpanStylesInRange
+import com.darkrockstudios.texteditor.sampleapp.common.FormatButton
+import com.darkrockstudios.texteditor.sampleapp.common.ToolbarButton
+import com.darkrockstudios.texteditor.sampleapp.common.toggleStyle
 import kotlin.reflect.KClass
 
 @Composable
@@ -86,9 +85,10 @@ fun EscPosToolbar(
                 it.style is DoubleUnderlineSpanStyle 
             }
             
-            // Check for inverted colors
+            // Check for inverted colors (background check is more reliable)
             val configuration = EscPosConfiguration.DEFAULT
-            isInvertedActive = styles.any { it.color == configuration.invertedTextColor }
+            isInvertedActive = styles.any { it.background == configuration.invertedBackgroundColor }
+
             // Check for double height (fontSize * 2)
             isDoubleHeightActive = styles.any { 
                 it.fontSize != TextUnit.Unspecified && 
@@ -259,23 +259,7 @@ fun EscPosToolbar(
                 )
             }
         }
-    }
-}
-
-private fun insertEscPosFormatting(
-    state: TextEditorState,
-    prefix: String,
-    suffix: String
-) {
-    val selection = state.selector.selection
-    if (selection != null) {
-        // Insert formatting around selected text
-        state.replace(selection, "$prefix${state.selector.getSelectedText().text}$suffix")
-    } else {
-        // Insert at cursor with placeholder
-        state.insertStringAtCursor("$prefix${"text"}$suffix")
-        // TODO: Select the "text" part for easy replacement
-    }
+	}
 }
 
 private fun insertAlignmentFormatting(
@@ -284,13 +268,17 @@ private fun insertAlignmentFormatting(
 ) {
     // Insert alignment at the beginning of the current line
     val cursorPos = state.cursor.position
-    state.getLineStartOffset(cursorPos.line)
     val alignmentText = "|$alignment|"
 
     // Check if alignment already exists at line start
     val lineText = state.textLines[cursorPos.line].text
     if (!lineText.trim().startsWith("|")) {
-        state.insertStringAtCursor(alignmentText)
+        // Insert alignment at line start by replacing from beginning
+        val range = TextEditorRange(
+            CharLineOffset(cursorPos.line, 0),
+            CharLineOffset(cursorPos.line, 0)
+        )
+        state.replace(range, alignmentText)
     } else {
         // Replace existing alignment
         val existingEnd = lineText.indexOf("|", 1) + 1
@@ -300,27 +288,6 @@ private fun insertAlignmentFormatting(
                 CharLineOffset(cursorPos.line, existingEnd)
             )
             state.replace(range, alignmentText)
-        }
-    }
-}
-
-private fun toggleStyle(
-    state: TextEditorState,
-    isActive: Boolean,
-    spanStyle: SpanStyle
-) {
-    val selection = state.selector.selection
-    if (selection != null) {
-        if (isActive) {
-            state.removeStyleSpan(selection, spanStyle)
-        } else {
-            state.addStyleSpan(selection, spanStyle)
-        }
-    } else {
-        if (isActive) {
-            state.cursor.removeStyle(spanStyle)
-        } else {
-            state.cursor.addStyle(spanStyle)
         }
     }
 }
@@ -339,12 +306,12 @@ private fun toggleRichStyle(
         existingSpans.forEach { span ->
             state.removeRichSpan(span.range.start, span.range.end, span.style)
         }
-        
+
         // Add new span if toggling on
         if (!isActive) {
             state.addRichSpan(selection.start, selection.end, richSpanStyle)
         }
-        
+
         // Force cursor movement to trigger state update
         state.cursor.moveRight()
         state.cursor.moveLeft()
@@ -353,7 +320,7 @@ private fun toggleRichStyle(
         val cursorPos = state.cursor.position
         val richSpans = state.getRichSpansAtPosition(cursorPos)
         val hasStyle = richSpans.any { styleClass.isInstance(it.style) }
-        
+
         if (hasStyle) {
             // Remove existing spans at cursor
             richSpans.filter { styleClass.isInstance(it.style) }
@@ -371,56 +338,4 @@ private fun toggleRichStyle(
             )
         }
     }
-}
-
-@Composable
-private fun ToolbarButton(
-    onClick: () -> Unit,
-    icon: ImageVector,
-    contentDescription: String,
-    isActive: Boolean = false,
-    enabled: Boolean = true,
-    modifier: Modifier = Modifier
-) {
-    FilledTonalIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier
-            .size(32.dp),
-        colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = if (isActive)
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-            else
-                MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (isActive)
-                MaterialTheme.colorScheme.primary
-            else
-                MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
-            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-        )
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(20.dp)
-        )
-    }
-}
-
-@Composable
-private fun FormatButton(
-    onClick: () -> Unit,
-    icon: ImageVector,
-    contentDescription: String,
-    isActive: Boolean,
-    enabled: Boolean = true
-) {
-    ToolbarButton(
-        onClick = onClick,
-        icon = icon,
-        contentDescription = contentDescription,
-        isActive = isActive,
-        enabled = enabled
-    )
 }

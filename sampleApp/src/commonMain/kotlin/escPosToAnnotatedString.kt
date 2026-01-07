@@ -58,28 +58,8 @@ private fun AnnotatedString.Builder.parseEscPosText(
                 }
             }
 
-            // Double underline: ++text++
-            /*text.startsWith("++", currentIndex) -> {
-                val endIndex = text.indexOf("++", currentIndex + 2)
-                if (endIndex != -1) {
-                    // Since AnnotatedString doesn't support RichSpanStyle, we use a visual approximation
-                    // with underline and increased line height to simulate double underline effect
-                    val doubleUnderlineStyle = SpanStyle(
-                        textDecoration = TextDecoration.Underline,
-                        fontSize = configuration.defaultTextStyle.fontSize * 1.1f, // Slightly larger for better visibility
-                        fontWeight = FontWeight.W600 // Semi-bold for thickness
-                    )
-                    withStyle(doubleUnderlineStyle) {
-                        append(text.substring(currentIndex + 2, endIndex))
-                    }
-                    currentIndex = endIndex + 2
-                } else {
-                    append(text[currentIndex])
-                    currentIndex++
-                }
-            }*/
-
             // Underline: __text__
+
             text.startsWith("__", currentIndex) -> {
                 val endIndex = text.indexOf("__", currentIndex + 2)
                 if (endIndex != -1) {
