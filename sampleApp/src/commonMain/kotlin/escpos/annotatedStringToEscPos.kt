@@ -24,20 +24,52 @@ fun AnnotatedString.toEscPos(
         val index: Int,
         val isStart: Boolean,
         val marker: String,
-        val priority: Int
+        val priority: Int,
+        val spanIndex: Int // Track which span this boundary belongs to
     )
 
     val boundaries = mutableListOf<StyleBoundary>()
 
     // Process regular span styles
-    spanStyles.forEach { span ->
-        val marker = getStyleMarker(span.item, configuration) ?: return@forEach
-        boundaries.add(StyleBoundary(span.start, true, marker.openMarker, 0))
-        boundaries.add(StyleBoundary(span.end, false, marker.closeMarker, 0))
+    spanStyles.forEachIndexed { spanIndex, span ->
+        val marker = getStyleMarker(span.item, configuration) ?: return@forEachIndexed
+        boundaries.add(StyleBoundary(span.start, true, marker.openMarker, 0, spanIndex))
+        boundaries.add(StyleBoundary(span.end, false, marker.closeMarker, 0, spanIndex))
     }
 
-    // Sort boundaries by position, then by priority
-    boundaries.sortWith(compareBy<StyleBoundary> { it.index }.thenBy { it.priority })
+    // Calculate nesting depths for proper ordering of closing markers
+    fun calculateNestingDepths(): Map<Int, Int> {
+        val depths = mutableMapOf<Int, Int>()
+        val activeSpans = mutableListOf<Int>()
+
+        val sortedBoundaries = boundaries.sortedWith(compareBy<StyleBoundary> { it.index }.thenBy { it.isStart })
+
+        sortedBoundaries.forEach { boundary ->
+            if (boundary.isStart) {
+                val depth = activeSpans.size
+                depths[boundary.spanIndex] = depth
+                activeSpans.add(boundary.spanIndex)
+            } else {
+                activeSpans.remove(boundary.spanIndex)
+            }
+        }
+
+        return depths
+    }
+
+    val nestingDepths = calculateNestingDepths()
+
+    // Update priorities for closing boundaries based on nesting depth
+    // Higher depth = higher priority (closes first)
+    boundaries.forEach { boundary ->
+        if (!boundary.isStart) {
+            val depth = nestingDepths[boundary.spanIndex] ?: 0
+            boundaries[boundaries.indexOf(boundary)] = boundary.copy(priority = depth)
+        }
+    }
+
+    // Sort boundaries by position, then by priority (higher priority first for closing markers)
+    boundaries.sortWith(compareBy<StyleBoundary> { it.index }.thenByDescending { it.priority })
 
     val result = StringBuilder()
     var currentIndex = 0
