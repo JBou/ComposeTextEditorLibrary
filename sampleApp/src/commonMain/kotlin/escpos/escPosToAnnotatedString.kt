@@ -71,7 +71,7 @@ private fun AnnotatedString.Builder.parseEscPosTextRecursive(
             
             // Check for any marker at current position
             else -> {
-                val marker = findMarkerAtPosition(text, currentIndex, end)
+                val marker = findMarkerAtPosition(text, currentIndex, end, configuration)
                 if (marker != null) {
                     val (markerType, markerEnd) = marker
                     
@@ -80,7 +80,7 @@ private fun AnnotatedString.Builder.parseEscPosTextRecursive(
                     val contentEnd = markerEnd - 2
                     
                     if (contentStart < contentEnd) {
-                        withStyle(getStyleForMarker(markerType, configuration)) {
+                        withStyle(configuration.styleMarkers[markerType] ?: SpanStyle()) {
                             // Recursively parse the content between markers
                             parseEscPosTextRecursive(text, contentStart, contentEnd, configuration)
                         }
@@ -97,28 +97,16 @@ private fun AnnotatedString.Builder.parseEscPosTextRecursive(
     }
 }
 
-private fun findMarkerAtPosition(text: String, index: Int, maxEnd: Int): Pair<String, Int>? {
-    val markers = listOf("**", "__", "~~", "##", "%%", "++")
+private fun findMarkerAtPosition(text: String, index: Int, maxEnd: Int, config: EscPosConfiguration): Pair<String, Int>? {
+    val markers = config.styleMarkers.keys
     
     for (marker in markers) {
         if (text.startsWith(marker, index)) {
-            val endIndex = text.indexOf(marker, index + 2)
+            val endIndex = text.indexOf(marker, index + marker.length)
             if (endIndex != -1 && endIndex + marker.length <= maxEnd) {
                 return Pair(marker, endIndex + marker.length)
             }
         }
     }
     return null
-}
-
-private fun getStyleForMarker(marker: String, config: EscPosConfiguration): SpanStyle {
-    return when (marker) {
-        "**" -> config.boldStyle
-        "__" -> config.underlineStyle
-        "~~" -> config.invertedStyle
-        "##" -> config.doubleHeightStyle
-        "%%" -> config.doubleWidthStyle
-        "++" -> config.shadowStyle
-        else -> SpanStyle()
-    }
 }

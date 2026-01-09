@@ -4,8 +4,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 
@@ -49,7 +49,17 @@ data class EscPosConfiguration(
     val rightAlignStyle: SpanStyle = SpanStyle(),  // Will be handled by custom span
 
     // Format marker style for alignment markers (semi-transparent)
-    val formatMarkerStyle: SpanStyle = SpanStyle(color = Color.Black.copy(alpha = 0.2f))
+    val formatMarkerStyle: SpanStyle = SpanStyle(color = Color.Black.copy(alpha = 0.2f)),
+
+    // Style markers map for bidirectional conversion
+    val styleMarkers: Map<String, SpanStyle> = mapOf(
+        "**" to boldStyle,
+        "__" to underlineStyle,
+        "~~" to invertedStyle,
+        "##" to doubleHeightStyle,
+        "%%" to doubleWidthStyle,
+        "++" to shadowStyle
+    )
 ) {
     companion object {
         val DEFAULT = EscPosConfiguration()

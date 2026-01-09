@@ -2,8 +2,6 @@ package com.darkrockstudios.texteditor.sampleapp
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 
 /**
  * Converts an AnnotatedString to an ESC/POS formatted string.
@@ -108,35 +106,11 @@ private fun getStyleMarker(
     style: SpanStyle,
     config: EscPosConfiguration
 ): StyleMarkerPair? {
-    // Check for inverted colors (background check is more reliable)
-    if (style.background == config.invertedBackgroundColor) {
-        return StyleMarkerPair("~~", "~~")
+    // Find the style in the config map
+    for ((marker, targetStyle) in config.styleMarkers) {
+        if (style == targetStyle) {
+            return StyleMarkerPair(marker, marker)
+        }
     }
-
-    // Check for bold
-    if (style.fontWeight?.weight == 700 || style.fontWeight == FontWeight.Bold) {
-        return StyleMarkerPair("**", "**")
-    }
-
-    // Check for underline
-    if (style.textDecoration == TextDecoration.Underline) {
-        return StyleMarkerPair("__", "__")
-    }
-
-    // Check for double height
-    if (style.fontSize.value > config.defaultTextStyle.fontSize.value * 1.2f) {
-        return StyleMarkerPair("##", "##")
-    }
-
-    // Check for double width
-    if (style.letterSpacing.value > 0.1f) {
-        return StyleMarkerPair("%%", "%%")
-    }
-
-    // Check for shadow (double strike)
-    if (style.shadow == config.shadowStyle.shadow) {
-        return StyleMarkerPair("++", "++")
-    }
-
     return null
 }

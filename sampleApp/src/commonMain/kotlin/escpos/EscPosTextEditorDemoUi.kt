@@ -1,12 +1,19 @@
 package escpos
 
 import Destination
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -18,14 +25,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.darkrockstudios.texteditor.TextEditor
+import com.darkrockstudios.texteditor.BasicTextEditor
+import com.darkrockstudios.texteditor.RichSpanClickListener
+import com.darkrockstudios.texteditor.TextEditorStyle
+import com.darkrockstudios.texteditor.contextmenu.TextEditorContextMenuState
+import com.darkrockstudios.texteditor.focusBorder
 import com.darkrockstudios.texteditor.rememberTextEditorStyle
-import com.darkrockstudios.texteditor.state.SpanClickType
-import com.darkrockstudios.texteditor.state.TextEditorState
-import com.darkrockstudios.texteditor.state.rememberTextEditorState
 import com.darkrockstudios.texteditor.sampleapp.EscPosConfiguration
 import com.darkrockstudios.texteditor.sampleapp.toEscPosAnnotatedString
 import com.darkrockstudios.texteditor.sampleapp.withEscPos
+import com.darkrockstudios.texteditor.state.SpanClickType
+import com.darkrockstudios.texteditor.state.TextEditorState
+import com.darkrockstudios.texteditor.state.rememberTextEditorState
 
 @Composable
 fun EscPosTextEditorDemoUi(
@@ -36,6 +47,7 @@ fun EscPosTextEditorDemoUi(
     val fixedText = createEscPosDemoText()
     val state: TextEditorState = rememberTextEditorState(fixedText.toEscPosAnnotatedString(configuration))
     val escPosExtension = remember(state, configuration) { state.withEscPos(configuration) }
+    val contextMenuState = remember { TextEditorContextMenuState() }
 
     // State for exported markup display
     var exportedMarkup by remember { mutableStateOf("") }
@@ -63,7 +75,8 @@ fun EscPosTextEditorDemoUi(
         }
 
         EscPosToolbar(
-            escPosExtension = escPosExtension
+            escPosExtension = escPosExtension,
+            contextMenuState = contextMenuState,
         )
 
         val style = rememberTextEditorStyle(
@@ -77,6 +90,7 @@ fun EscPosTextEditorDemoUi(
                 .padding(8.dp)
                 .weight(1f), 
             style = style,
+            contextMenuState = contextMenuState,
             onRichSpanClick = { span, clickType, _ ->
                 when (clickType) {
                     SpanClickType.TAP -> println("ESC/POS span tap: $span")
@@ -127,3 +141,30 @@ private fun createEscPosDemoText(): String = """
 |right|Thank you for %%visiting%%!
 __Please come again__
 """.trimIndent()
+
+//Copy of com.darkrockstudios.texteditor.TextEditor with contextMenuState
+// and 8.dp padding
+@Composable
+private fun TextEditor(
+    state: TextEditorState = rememberTextEditorState(),
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(8.dp),
+    enabled: Boolean = true,
+    autoFocus: Boolean = false,
+    style: TextEditorStyle = rememberTextEditorStyle(),
+    contextMenuState: TextEditorContextMenuState? = null,
+    onRichSpanClick: RichSpanClickListener? = null,
+) {
+    Surface(modifier = modifier.focusBorder(state.isFocused && enabled, style)) {
+        BasicTextEditor(
+            state = state,
+            modifier = Modifier,
+            contentPadding = contentPadding,
+            enabled = enabled,
+            autoFocus = autoFocus,
+            style = style,
+            contextMenuState = contextMenuState,
+            onRichSpanClick = onRichSpanClick,
+        )
+    }
+}

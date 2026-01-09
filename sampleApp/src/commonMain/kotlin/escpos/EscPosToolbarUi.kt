@@ -1,12 +1,14 @@
 package escpos
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
 import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.InvertColors
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.FilledTonalIconButton
@@ -34,23 +37,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.darkrockstudios.texteditor.CharLineOffset
 import com.darkrockstudios.texteditor.TextEditorRange
+import com.darkrockstudios.texteditor.contextmenu.TextEditorContextMenuState
 import com.darkrockstudios.texteditor.sampleapp.EscPosConfiguration
 import com.darkrockstudios.texteditor.sampleapp.EscPosExtension
 import com.darkrockstudios.texteditor.state.TextEditorState
 import com.darkrockstudios.texteditor.state.getSpanStylesInRange
 
-
 @Composable
 fun EscPosToolbar(
     escPosExtension: EscPosExtension,
     modifier: Modifier = Modifier,
+    contextMenuState: TextEditorContextMenuState? = null,
 ) {
     val state = remember(escPosExtension) { escPosExtension.editorState }
 
@@ -95,10 +97,13 @@ fun EscPosToolbar(
     }
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 2.dp)
+                .wrapContentWidth()
+                .horizontalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // History Controls Group
@@ -118,6 +123,20 @@ fun EscPosToolbar(
                     contentDescription = "Redo",
                     enabled = state.canRedo
                 )
+
+                if (contextMenuState != null) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    ToolbarButton(
+                        onClick = { 
+                            val targetPosition = state.selector.selection?.end ?: state.cursorPosition
+                            val cursorMetrics = state.getPositionForOffset(targetPosition)
+                            val menuOffset = cursorMetrics.position + Offset(0f, 35f) // Add some vertical buffer like wordVisibilityBuffer
+                            contextMenuState.showMenu(menuOffset)
+                        },
+                        icon = Icons.Filled.MoreVert,
+                        contentDescription = "Show context menu"
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
