@@ -7,6 +7,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.unit.sp
 
 /**
@@ -26,13 +27,13 @@ data class EscPosConfiguration(
         color = invertedTextColor,
         background = invertedBackgroundColor
     ),
-    val doubleHeightScale: Float = 1.2f,
+    val doubleHeightScale: Float = 2f,
     val doubleHeightStyle: SpanStyle = SpanStyle(
-        fontSize = defaultTextStyle.fontSize * doubleHeightScale
+        fontSize = defaultTextStyle.fontSize * doubleHeightScale,
+        textGeometricTransform = TextGeometricTransform(scaleX = 0.5f)
     ),
-    val doubleWidthScale: Float = 0.5f,
     val doubleWidthStyle: SpanStyle = SpanStyle(
-        letterSpacing = defaultTextStyle.fontSize * doubleWidthScale
+        textGeometricTransform = TextGeometricTransform(scaleX = 2.0f)
     ),
     val shadowOffset: Float = 1.5f,
     val shadowBlurRadius: Float = 0f,
